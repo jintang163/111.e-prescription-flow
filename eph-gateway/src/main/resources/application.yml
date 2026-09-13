@@ -1,0 +1,35 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: eph-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: prescription
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/prescriptions/**,/api/verify/**,/api/patients/prescriptions/**
+        - id: review
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/review/**
+        - id: transfer
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/pharmacy-orders/**,/api/pharmacies/**,/api/admin/pharmacies/**,/api/admin/pharmacy-orders/**,/api/admin/reconcile/**,/api/internal/mock-pharmacy/**
+        - id: user
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/auth/**,/api/users/**,/api/doctors/**,/api/pharmacists/**,/api/patients/**,/api/admin/users/**,/api/admin/keys/**
+
+eph:
+  jwt:
+    secret: ${EPH_JWT_SECRET:eph-dev-secret-key-change-me-please-0123456789abcdef}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

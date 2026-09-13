@@ -1,0 +1,56 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: eph-prescription-service
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/eph_prescription?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:root}
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    schemas: eph_prescription
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  rabbitmq:
+    host: ${RABBIT_HOST:localhost}
+    port: ${RABBIT_PORT:5672}
+    username: ${RABBIT_USER:guest}
+    password: ${RABBIT_PASSWORD:guest}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        acknowledge-mode: auto
+        default-requeue-rejected: false
+        concurrency: 1
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+
+eph:
+  jwt:
+    secret: ${EPH_JWT_SECRET:eph-dev-secret-key-change-me-please-0123456789abcdef}
+  internal:
+    secret: ${EPH_INTERNAL_SECRET:eph-internal-dev-secret}
+    user-base-url: ${USER_SERVICE_URL:http://localhost:8081}
+  storage:
+    type: ${STORAGE_TYPE:local}
+    local-dir: ${LOCAL_STORAGE_DIR:./eph-data/pdf}
+  pdf:
+    verify-base-url: ${VERIFY_BASE_URL:http://localhost:8080/api/verify/signatures}
+  rx:
+    expire-days: ${RX_EXPIRE_DAYS:3}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

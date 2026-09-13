@@ -22,6 +22,16 @@ dist/
 # Logs
 *.log
 logs/
+eph-keys/
+eph-data/
+eph-run/
+
+# Frontend
+web-admin/node_modules/
+web-admin/dist/
+app-patient/node_modules/
+app-patient/dist/
+app-patient/unpackage/
 
 # OS
 .DS_Store

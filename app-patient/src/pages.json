@@ -1,0 +1,22 @@
+{
+	"pages": [
+		{
+			"path": "pages/index/index",
+			"style": { "navigationBarTitleText": "我的处方" }
+		},
+		{
+			"path": "pages/login/login",
+			"style": { "navigationBarTitleText": "登录" }
+		},
+		{
+			"path": "pages/detail/detail",
+			"style": { "navigationBarTitleText": "取药进度" }
+		}
+	],
+	"globalStyle": {
+		"navigationBarTextStyle": "white",
+		"navigationBarTitleText": "互联网医院",
+		"navigationBarBackgroundColor": "#1e6fb8",
+		"backgroundColor": "#f5f6fa"
+	}
+}

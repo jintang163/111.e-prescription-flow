@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://eph.hospital.cn/review">
+
+  <process id="rxReviewProcess" name="电子处方审核流程" isExecutable="true">
+
+    <startEvent id="startRx" name="处方提交"/>
+    <sequenceFlow id="f1" sourceRef="startRx" targetRef="pharmacistReview"/>
+
+    <userTask id="pharmacistReview" name="药师审核" flowable:candidateGroups="PHARMACIST"/>
+    <sequenceFlow id="f2" sourceRef="pharmacistReview" targetRef="decisionGateway"/>
+
+    <exclusiveGateway id="decisionGateway" name="审核结论"/>
+
+    <sequenceFlow id="fApprove" sourceRef="decisionGateway" targetRef="endApproved">
+      <conditionExpression xsi:type="tFormalExpression">${result == 'APPROVED'}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="fReject" sourceRef="decisionGateway" targetRef="endRejected">
+      <conditionExpression xsi:type="tFormalExpression">${result == 'REJECTED'}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="fAmend" sourceRef="decisionGateway" targetRef="doctorAmend">
+      <conditionExpression xsi:type="tFormalExpression">${result == 'AMENDMENT'}</conditionExpression>
+    </sequenceFlow>
+
+    <userTask id="doctorAmend" name="医生补正" flowable:candidateUsers="${doctorId}"/>
+    <sequenceFlow id="fAmendBack" sourceRef="doctorAmend" targetRef="pharmacistReview"/>
+
+    <endEvent id="endApproved" name="审核通过"/>
+    <endEvent id="endRejected" name="驳回终止"/>
+
+  </process>
+</definitions>

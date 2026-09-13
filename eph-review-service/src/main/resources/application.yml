@@ -1,0 +1,56 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: eph-review-service
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/eph_review?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:root}
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    schemas: eph_review
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  rabbitmq:
+    host: ${RABBIT_HOST:localhost}
+    port: ${RABBIT_PORT:5672}
+    username: ${RABBIT_USER:guest}
+    password: ${RABBIT_PASSWORD:guest}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        acknowledge-mode: auto
+        default-requeue-rejected: false
+        concurrency: 1
+
+flowable:
+  database-schema-update: true
+  async-executor-activate: false
+  history-level: full
+  process-definition-location-prefix: classpath:/processes/
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+
+eph:
+  jwt:
+    secret: ${EPH_JWT_SECRET:eph-dev-secret-key-change-me-please-0123456789abcdef}
+  internal:
+    secret: ${EPH_INTERNAL_SECRET:eph-internal-dev-secret}
+    user-base-url: ${USER_SERVICE_URL:http://localhost:8081}
+    prescription-base-url: ${PRESCRIPTION_SERVICE_URL:http://localhost:8082}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
