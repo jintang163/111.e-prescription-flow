@@ -3,7 +3,9 @@ package cn.hospital.eph.transfer.adapter;
 import cn.hospital.eph.common.event.Events;
 import cn.hospital.eph.transfer.entity.Pharmacy;
 import cn.hospital.eph.transfer.entity.PharmacyDrugCatalog;
+import cn.hospital.eph.transfer.entity.PharmacyOrder;
 import cn.hospital.eph.transfer.mapper.PharmacyDrugCatalogMapper;
+import cn.hospital.eph.transfer.mapper.PharmacyOrderMapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -17,6 +19,7 @@ import java.util.List;
 public class MockPharmacyAdapter implements PharmacyAdapter {
 
     private final PharmacyDrugCatalogMapper catalogMapper;
+    private final PharmacyOrderMapper orderMapper;
 
     @Override
     public String type() {
@@ -62,8 +65,12 @@ public class MockPharmacyAdapter implements PharmacyAdapter {
 
     @Override
     public String queryStatus(AdapterContext ctx, String externalOrderNo) {
-        // Mock 订单状态由管理推进接口/回调驱动，无外部查询
-        return null;
+        // Mock 的"外部系统"即本地 pharmacy_order 表：对账时按外部单号回读当前履约状态，查不到返回 null
+        PharmacyOrder order = orderMapper.selectOne(new QueryWrapper<PharmacyOrder>()
+                .eq("pharmacy_id", ctx.pharmacy().getId())
+                .eq("external_order_no", externalOrderNo)
+                .last("limit 1"));
+        return order == null ? null : order.getStatus();
     }
 
     private Integer stock(long pharmacyId, String drugCode) {

@@ -19,6 +19,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Objects;
 
 /** 消费履约状态事件，物化到处方主表供患者/医生一次性查询 */
 @Slf4j
@@ -55,6 +56,13 @@ public class FulfillmentStatusConsumer {
             log.warn("未知履约状态，忽略: {}", fs.status());
             return;
         }
+        // 单调守卫：同一订单的乱序/重复事件不回退已物化的履约状态（REJECTED/CANCELLED 终态随时可到达）
+        FulfillmentStatus current = materializedStatus(rx, fs.orderNo());
+        if (current != null && newStatus.ordinal() < current.ordinal()
+                && newStatus != FulfillmentStatus.REJECTED && newStatus != FulfillmentStatus.CANCELLED) {
+            log.info("履约状态回退忽略 rxNo={} {}→{}", fs.rxNo(), current.code(), newStatus.code());
+            return;
+        }
         rx.setFulfillmentStatus(newStatus.code());
         rx.setCurrentPharmacyId(fs.pharmacyId());
         rx.setCurrentPharmacyName(fs.pharmacyName());
@@ -87,6 +95,18 @@ public class FulfillmentStatusConsumer {
         logMapper.insert(l);
     }
 
+    /** 同一订单已物化的履约状态；新订单（改派）或无历史状态返回 null */
+    private FulfillmentStatus materializedStatus(Prescription rx, String orderNo) {
+        if (rx.getFulfillmentStatus() == null || !Objects.equals(rx.getCurrentOrderNo(), orderNo)) {
+            return null;
+        }
+        try {
+            return FulfillmentStatus.of(rx.getFulfillmentStatus());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
     /** 履约状态 → 处方主状态联动 */
     private RxStatus mapRxStatus(FulfillmentStatus s) {
         return switch (s) {
@@ -106,7 +126,7 @@ public class FulfillmentStatusConsumer {
             RxStatus.EFFECTIVE, RxStatus.DISPATCHING, RxStatus.DISPATCHED, RxStatus.FULFILLING,
             RxStatus.DISPENSED, RxStatus.READY_FOR_PICKUP, RxStatus.PICKED_UP};
 
-    /** 沿履约链或异常分支取下一跳 */
+    /** 沿履约链或异常分支取下一跳；目标不领先于当前状态（重复/乱序）或不可达时返回 null */
     private RxStatus nextHop(RxStatus cur, RxStatus target) {
         if (target == RxStatus.TRANSFER_FAILED) {
             return switch (cur) {
@@ -116,11 +136,34 @@ public class FulfillmentStatusConsumer {
                 default -> null;
             };
         }
-        for (int i = 0; i < FULFILL_CHAIN.length - 1; i++) {
-            if (FULFILL_CHAIN[i] == cur) {
-                return FULFILL_CHAIN[i + 1];
+        if (target == RxStatus.CANCELLED) {
+            return switch (cur) {
+                case EFFECTIVE, TRANSFER_FAILED -> RxStatus.CANCELLED;
+                case DISPATCHING -> RxStatus.TRANSFER_FAILED;
+                case DISPATCHED -> RxStatus.DISPATCHING;
+                default -> null; // 配药中及以后不可取消，保持原状态
+            };
+        }
+        int targetIdx = chainIndex(target);
+        if (targetIdx < 0) {
+            return null;
+        }
+        if (cur == RxStatus.TRANSFER_FAILED) {
+            return RxStatus.DISPATCHING; // 改派重新进入履约链
+        }
+        int curIdx = chainIndex(cur);
+        if (curIdx < 0 || curIdx >= targetIdx) {
+            return null; // 不在履约链上，或事件重复/乱序（单调守卫）
+        }
+        return FULFILL_CHAIN[curIdx + 1];
+    }
+
+    private static int chainIndex(RxStatus s) {
+        for (int i = 0; i < FULFILL_CHAIN.length; i++) {
+            if (FULFILL_CHAIN[i] == s) {
+                return i;
             }
         }
-        return null;
+        return -1;
     }
 }
